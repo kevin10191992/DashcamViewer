@@ -1,0 +1,19 @@
+services:
+  dashcam-viewer:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: d026-dashcam-viewer:latest
+    container_name: d026-dashcam-viewer
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    environment:
+      - PORT=3000
+      - DASHCAM_DIR=/data/dashcam
+      - COPY_DIR=/data/exports
+    volumes:
+      # Monta tu carpeta de grabaciones de la cámara aquí (en modo solo lectura :ro para proteger los datos)
+      - ./dashcam_data:/data/dashcam:ro
+      # Carpeta donde se guardarán los clips copiados y exportaciones
+      - ./exports:/data/exports

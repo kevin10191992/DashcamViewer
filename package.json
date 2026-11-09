@@ -1,0 +1,50 @@
+{
+  "name": "d026-dashcam-viewer",
+  "version": "1.0.0",
+  "description": "Visualizador y extractor de rutas GPS para Dashcam D026",
+  "main": "main.js",
+  "scripts": {
+    "start": "electron .",
+    "server": "node server.js",
+    "setup:ffmpeg": "powershell -ExecutionPolicy Bypass -File scripts/setup-ffmpeg.ps1",
+    "build:portable": "electron-builder --win portable"
+  },
+  "keywords": ["dashcam", "gps", "viewer", "openstreetmap", "d026"],
+  "author": "kperez",
+  "license": "MIT",
+  "type": "commonjs",
+  "dependencies": {
+    "express": "^5.3.0",
+    "leaflet": "^1.9.4",
+    "mpegts.js": "^1.8.2"
+  },
+  "devDependencies": {
+    "electron": "^45.2.3",
+    "electron-builder": "^26.18.0"
+  },
+  "build": {
+    "appId": "com.dashcam.d026viewer",
+    "productName": "D026 Dashcam Viewer",
+    "directories": {
+      "output": "dist"
+    },
+    "win": {
+      "target": ["portable"]
+    },
+    "portable": {
+      "artifactName": "D026-Dashcam-Viewer-Portable.exe"
+    },
+    "extraResources": [
+      {
+        "from": "bin",
+        "to": "bin"
+      }
+    ],
+    "files": [
+      "**/*",
+      "!dist/*",
+      "!cache_mp4/**/*",
+      "!exports/**/*"
+    ]
+  }
+}

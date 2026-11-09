@@ -1,0 +1,535 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>D026 Dashcam Viewer & GPS Route Studio</title>
+    
+    <!-- Leaflet CSS -->
+    <link rel="stylesheet" href="/lib/leaflet/leaflet.css">
+    
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+    
+    <!-- App CSS -->
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div class="app-container">
+        <!-- Top Navigation Bar -->
+        <header class="app-header">
+            <div class="header-left">
+                <div class="app-logo">
+                    <span class="logo-icon">🏎️</span>
+                    <div class="logo-text">
+                        <h1>D026 DASHCAM <span class="badge-pro">VIEWER</span></h1>
+                        <span class="sub-text">OpenStreetMap & Telemetría GPS</span>
+                    </div>
+                </div>
+
+                <!-- Source Folder Indicator & Config -->
+                <button class="source-folder-pill" id="btnOpenSettings" title="Haz clic para ver o cambiar la carpeta de la dashcam">
+                    <span class="folder-icon">📁</span>
+                    <span class="folder-label" id="lblSourceFolder">D026DASHCAM</span>
+                    <span class="gear-icon">⚙️</span>
+                </button>
+            </div>
+
+            <!-- Global Journey Metrics Summary -->
+            <div class="header-stats" id="headerStats">
+                <div class="stat-item">
+                    <span class="stat-label">CLIPS</span>
+                    <span class="stat-val" id="statClips">--</span>
+                </div>
+                <div class="stat-divider"></div>
+                <div class="stat-item">
+                    <span class="stat-label">DISTANCIA</span>
+                    <span class="stat-val" id="statDist">-- km</span>
+                </div>
+                <div class="stat-divider"></div>
+                <div class="stat-item">
+                    <span class="stat-label">VEL. MÁX</span>
+                    <span class="stat-val highlight" id="statMaxSpeed">-- km/h</span>
+                </div>
+                <div class="stat-divider"></div>
+                <div class="stat-item">
+                    <span class="stat-label">FECHAS</span>
+                    <span class="stat-val mono" id="statDates">--</span>
+                </div>
+            </div>
+
+            <!-- Action Buttons -->
+            <div class="header-actions">
+                <!-- Copy / Save Clip with Friendly Name -->
+                <button class="btn btn-accent" id="btnOpenCopyClip">
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"></path><rect x="8" y="2" width="8" height="4" rx="1" ry="1"></rect></svg>
+                    Copiar / Guardar Clip
+                </button>
+
+                <!-- Export Full Route Menu -->
+                <div class="dropdown">
+                    <button class="btn btn-secondary" id="btnExportMenu">
+                        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
+                        Exportar Ruta
+                        <span class="arrow-down">▾</span>
+                    </button>
+                    <div class="dropdown-content" id="exportDropdown">
+                        <a href="/api/export/gpx" download="trayecto_completo.gpx">
+                            <span class="icon">📍</span> Descargar GPX Completo (187 clips)
+                        </a>
+                        <a href="/api/export/geojson" download="trayecto_completo.geojson">
+                            <span class="icon">🌐</span> Descargar GeoJSON
+                        </a>
+                        <a href="/api/export/kml" download="trayecto_completo.kml">
+                            <span class="icon">🗺️</span> Descargar KML (Google Earth)
+                        </a>
+                    </div>
+                </div>
+
+                <!-- Video with Telemetry Render -->
+                <button class="btn btn-primary" id="btnOpenVideoExport">
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="2" width="20" height="20" rx="2.18" ry="2.18"></rect><line x1="7" y1="2" x2="7" y2="22"></line><line x1="17" y1="2" x2="17" y2="22"></line><line x1="2" y1="12" x2="22" y2="12"></line><line x1="2" y1="7" x2="7" y2="7"></line><line x1="2" y1="17" x2="7" y2="17"></line><line x1="17" y1="17" x2="22" y2="17"></line><line x1="17" y1="7" x2="22" y2="7"></line></svg>
+                    Renderizar con Telemetría
+                </button>
+            </div>
+        </header>
+
+        <!-- Main Split Screen Workspace -->
+        <main class="split-viewport" id="splitViewport">
+            <!-- Left Pane: Video Player -->
+            <section class="split-pane video-pane" id="videoPane">
+                <div class="pane-header">
+                    <div class="pane-title">
+                        <span class="live-dot"></span>
+                        <span id="currentClipName">Cargando clip...</span>
+                        <span class="badge-camera" id="cameraBadge">DELANTERA (F)</span>
+                    </div>
+
+                    <div class="pane-controls">
+                        <!-- Quick Save Current Clip -->
+                        <button class="icon-btn highlight" id="btnQuickSaveCurrent" title="Copiar este clip a otra carpeta con nombre legible">
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path><polyline points="17 21 17 13 7 13 7 21"></polyline><polyline points="7 3 7 8 15 8"></polyline></svg>
+                            Copiar Clip
+                        </button>
+
+                        <!-- Camera Toggle F / R -->
+                        <div class="camera-toggle-group">
+                            <button class="cam-btn active" id="btnCamFront" title="Cámara Frontal">F</button>
+                            <button class="cam-btn" id="btnCamRear" title="Cámara Trasera">R</button>
+                        </div>
+
+                        <!-- HUD Overlay Toggle -->
+                        <button class="icon-btn active" id="btnToggleHUD" title="Mostrar/Ocultar HUD Telemetría">
+                            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><path d="M12 6v6l4 2"></path></svg>
+                            HUD
+                        </button>
+
+                        <!-- Maximize Video Pane -->
+                        <button class="icon-btn" id="btnExpandVideo" title="Expandir Video a Pantalla Completa">
+                            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="15 3 21 3 21 9"></polyline><polyline points="9 21 3 21 3 15"></polyline><line x1="21" y1="3" x2="14" y2="10"></line><line x1="3" y1="21" x2="10" y2="14"></line></svg>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Video Viewport & Telemetry HUD Overlay -->
+                <div class="video-container" id="videoContainer">
+                    <video id="dashcamVideo" preload="auto" playsinline></video>
+
+                    <!-- HUD Telemetry Overlay -->
+                    <div class="telemetry-hud" id="telemetryHUD">
+                        <!-- Top Bar: Timestamp and Camera Info -->
+                        <div class="hud-top">
+                            <div class="hud-timestamp" id="hudTimestamp">2026/11/08 09:45:22</div>
+                            <div class="hud-device">D026 4K UHD</div>
+                        </div>
+
+                        <!-- Bottom HUD: Speedometer, Compass & Coords -->
+                        <div class="hud-bottom">
+                            <!-- Speedometer Widget -->
+                            <div class="hud-speedometer">
+                                <div class="speed-val" id="hudSpeed">0</div>
+                                <div class="speed-unit">KM/H</div>
+                            </div>
+
+                            <!-- Compass & Heading -->
+                            <div class="hud-compass-box">
+                                <div class="compass-dial" id="compassDial">
+                                    <div class="compass-arrow" id="compassArrow">▲</div>
+                                </div>
+                                <div class="compass-info">
+                                    <span class="heading-deg" id="hudHeading">0°</span>
+                                    <span class="heading-cardinal" id="hudCardinal">N</span>
+                                </div>
+                            </div>
+
+                            <!-- Coordinates & Stats -->
+                            <div class="hud-coords-box">
+                                <div class="coord-row">
+                                    <span class="coord-label">LAT:</span>
+                                    <span class="coord-val" id="hudLat">--.------°</span>
+                                </div>
+                                <div class="coord-row">
+                                    <span class="coord-label">LON:</span>
+                                    <span class="coord-val" id="hudLon">--.------°</span>
+                                </div>
+                                <div class="coord-row gsensor-row">
+                                    <span class="coord-label">G-XYZ:</span>
+                                    <span class="coord-val mono" id="hudGSensor">0.0, 0.0, 0.0</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Video Buffering Spinner -->
+                    <div class="video-loader" id="videoLoader">
+                        <div class="spinner"></div>
+                        <span>Cargando video...</span>
+                    </div>
+                </div>
+
+                <!-- Playback Control Bar -->
+                <div class="player-controls">
+                    <!-- Progress / Scrub Bar -->
+                    <div class="progress-container" id="progressContainer">
+                        <div class="progress-bar-bg">
+                            <div class="progress-bar-fill" id="progressBarFill"></div>
+                            <div class="progress-handle" id="progressHandle"></div>
+                        </div>
+                        <div class="scrub-tooltip" id="scrubTooltip">00:00</div>
+                    </div>
+
+                    <div class="controls-row">
+                        <div class="controls-left">
+                            <!-- Prev Clip -->
+                            <button class="ctrl-btn" id="btnPrevClip" title="Clip Anterior">
+                                <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><polygon points="19 20 9 12 19 4 19 20"></polygon><line x1="5" y1="19" x2="5" y2="5" stroke="currentColor" stroke-width="2"></line></svg>
+                            </button>
+
+                            <!-- Play / Pause -->
+                            <button class="ctrl-btn play-btn" id="btnPlayPause" title="Reproducir / Pausar">
+                                <svg class="icon-play" width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg>
+                                <svg class="icon-pause hidden" width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><rect x="6" y="4" width="4" height="16"></rect><rect x="14" y="4" width="4" height="16"></rect></svg>
+                            </button>
+
+                            <!-- Next Clip -->
+                            <button class="ctrl-btn" id="btnNextClip" title="Siguiente Clip">
+                                <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><polygon points="5 4 15 12 5 20 5 4"></polygon><line x1="19" y1="5" x2="19" y2="19" stroke="currentColor" stroke-width="2"></line></svg>
+                            </button>
+
+                            <!-- Time Display -->
+                            <div class="time-display">
+                                <span id="timeCurrent">00:00</span> / <span id="timeDuration">01:00</span>
+                            </div>
+                        </div>
+
+                        <div class="controls-right">
+                            <!-- Playback Speed -->
+                            <div class="speed-selector">
+                                <button class="speed-btn" data-speed="0.5">0.5x</button>
+                                <button class="speed-btn active" data-speed="1">1x</button>
+                                <button class="speed-btn" data-speed="2">2x</button>
+                                <button class="speed-btn" data-speed="4">4x</button>
+                            </div>
+
+                            <!-- Auto-advance Toggle -->
+                            <label class="toggle-control" title="Reproducir automáticamente el siguiente clip al terminar">
+                                <input type="checkbox" id="chkAutoAdvance" checked>
+                                <span class="toggle-slider"></span>
+                                <span class="toggle-label">Auto-Next</span>
+                            </label>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Resizer Split Divider Handle -->
+            <div class="split-divider" id="splitDivider" title="Arrastra para ajustar el tamaño de pantalla">
+                <div class="divider-handle"></div>
+                <button class="btn-reset-split" id="btnResetSplit" title="Restablecer división 50/50">⚖️</button>
+            </div>
+
+            <!-- Right Pane: OpenStreetMap -->
+            <section class="split-pane map-pane" id="mapPane">
+                <div class="pane-header">
+                    <div class="pane-title">
+                        <span class="icon">🗺️</span>
+                        <span>OpenStreetMap — Ruta GPS en Vivo</span>
+                    </div>
+
+                    <div class="pane-controls">
+                        <!-- Follow Vehicle Toggle -->
+                        <button class="icon-btn active" id="btnFollowVehicle" title="Centrar mapa en la posición del vehículo">
+                            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><polygon points="12 8 8 12 12 16 12 8"></polygon></svg>
+                            Centrar
+                        </button>
+
+                        <!-- Map Layer Toggle -->
+                        <select class="select-map-layer" id="selectMapLayer" title="Estilo del Mapa">
+                            <option value="osm">OpenStreetMap Estándar</option>
+                            <option value="dark">CartoDB Dark (Nocturno)</option>
+                            <option value="hot">OSM Humanitario</option>
+                        </select>
+
+                        <!-- Maximize Map Pane -->
+                        <button class="icon-btn" id="btnExpandMap" title="Expandir Mapa a Pantalla Completa">
+                            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="15 3 21 3 21 9"></polyline><polyline points="9 21 3 21 3 15"></polyline><line x1="21" y1="3" x2="14" y2="10"></line><line x1="3" y1="21" x2="10" y2="14"></line></svg>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Leaflet Map Container -->
+                <div class="map-container" id="map"></div>
+
+                <!-- Map Footer Legend & Trip Position -->
+                <div class="map-footer">
+                    <div class="map-legend">
+                        <span class="legend-item"><span class="legend-dot full-track"></span> Ruta Completa (54.5 km)</span>
+                        <span class="legend-item"><span class="legend-dot active-clip"></span> Clip Actual</span>
+                        <span class="legend-item"><span class="legend-dot vehicle-pos"></span> Posición Vehículo</span>
+                    </div>
+                    <div class="map-hint">💡 Haz clic en cualquier parte de la línea para saltar al segundo exacto</div>
+                </div>
+            </section>
+        </main>
+
+        <!-- Bottom Drawer: Clips Browser & Timeline -->
+        <footer class="clips-drawer" id="clipsDrawer">
+            <div class="drawer-header">
+                <div class="drawer-title">
+                    <span class="icon">📁</span>
+                    <span>Lista de Grabaciones (<span id="clipsCount">0</span> clips disponibles)</span>
+                </div>
+                <div class="drawer-tools">
+                    <input type="text" id="inputSearchClips" placeholder="Filtrar por fecha u hora..." class="search-input">
+                    <button class="icon-btn" id="btnToggleDrawer" title="Minimizar / Expandir Bandeja">▼</button>
+                </div>
+            </div>
+
+            <div class="clips-grid" id="clipsGrid">
+                <!-- Clip Cards generated via JavaScript -->
+            </div>
+        </footer>
+    </div>
+
+    <!-- ================================================================= -->
+    <!-- MODAL 1: COPIAR / GUARDAR CLIP CON NOMBRE LEGIBLE                 -->
+    <!-- ================================================================= -->
+    <div class="modal-backdrop hidden" id="copyModal">
+        <div class="modal-box modal-wide">
+            <div class="modal-header">
+                <h3>📋 Copiar Clip a Otra Carpeta con Nombre Legible</h3>
+                <button class="btn-close-modal" id="btnCloseCopyModal">✕</button>
+            </div>
+
+            <div class="modal-body">
+                <div class="modal-info-banner">
+                    Los archivos originales de la cámara tienen nombres crudos (ej: <code id="rawClipPreview">20261108094520_0000053F.ts</code>). Esta herramienta te permite copiarlos a cualquier carpeta de tu equipo con un nombre claro y legible, o convertirlos a MP4 estándar en milisegundos.
+                </div>
+
+                <!-- Clip Selection -->
+                <div class="form-group">
+                    <label>Clip Seleccionado:</label>
+                    <select id="copyClipSelect" class="form-select"></select>
+                </div>
+
+                <div class="form-row">
+                    <!-- Camera Selection -->
+                    <div class="form-group">
+                        <label>Cámara a Copiar:</label>
+                        <select id="copyCameraSelect" class="form-select">
+                            <option value="F">Delantera (F)</option>
+                            <option value="R">Trasera (R)</option>
+                            <option value="both">Ambas Cámaras (F + R)</option>
+                        </select>
+                    </div>
+
+                    <!-- Output Format -->
+                    <div class="form-group">
+                        <label>Formato de Salida:</label>
+                        <select id="copyFormatSelect" class="form-select">
+                            <option value="mp4">MP4 Universal (Recomendado - 0.4s remux)</option>
+                            <option value="ts">TS Original (Copia directa sin convertir)</option>
+                        </select>
+                    </div>
+                </div>
+
+                <!-- Naming Template -->
+                <div class="form-group">
+                    <label>Estilo de Nombre del Archivo:</label>
+                    <div class="radio-options-grid">
+                        <label class="radio-card">
+                            <input type="radio" name="nameTemplate" value="datetime" checked>
+                            <div class="radio-content">
+                                <span class="radio-title">📅 Fecha y Hora Estándar</span>
+                                <span class="radio-example">2026-11-08_09h45m20s_Frontal.mp4</span>
+                            </div>
+                        </label>
+                        <label class="radio-card">
+                            <input type="radio" name="nameTemplate" value="detailed">
+                            <div class="radio-content">
+                                <span class="radio-title">⚡ Detallado (Clip + Velocidad)</span>
+                                <span class="radio-example">Clip-053_2026-11-08_09h45m_Max59kmh_Frontal.mp4</span>
+                            </div>
+                        </label>
+                        <label class="radio-card">
+                            <input type="radio" name="nameTemplate" value="custom">
+                            <div class="radio-content">
+                                <span class="radio-title">✏️ Nombre Personalizado</span>
+                                <span class="radio-example">Tú eliges el nombre que quieras</span>
+                            </div>
+                        </label>
+                    </div>
+                </div>
+
+                <!-- Custom Name Input (conditional) -->
+                <div class="form-group hidden" id="customNameGroup">
+                    <label>Escribe el nombre personalizado:</label>
+                    <input type="text" id="inputCustomName" class="form-input" placeholder="Ej: Viaje_Barranquilla_Salida">
+                </div>
+
+                <!-- Live Preview of Resulting Name -->
+                <div class="name-preview-box">
+                    <span class="preview-label">Nombre resultante:</span>
+                    <span class="preview-name" id="lblResultingName">2026-11-08_09h45m20s_Frontal.mp4</span>
+                </div>
+
+                <!-- Destination Directory -->
+                <div class="form-group">
+                    <label>Ruta de la Carpeta Destino en tu PC:</label>
+                    <div class="input-with-action">
+                        <input type="text" id="inputDestDir" class="form-input mono" placeholder="D:\Videos\Dashcam o /ruta/destino">
+                        <button class="btn btn-secondary" id="btnPickDestFolder" title="Buscar carpeta en el equipo">📁 Examinar...</button>
+                        <button class="btn btn-secondary" id="btnBrowseDefaultDest" title="Usar carpeta de Videos">Videos</button>
+                    </div>
+                    <span class="input-hint">Si la carpeta no existe, el programa la creará automáticamente.</span>
+                </div>
+
+                <!-- Copy Result Banner -->
+                <div class="copy-success-banner hidden" id="copySuccessBanner">
+                    <div class="success-message">
+                        <span class="success-icon">✅</span>
+                        <div class="success-text">
+                            <strong id="copySuccessTitle">¡Archivo copiado con éxito!</strong>
+                            <span id="copySuccessDesc">Guardado en la carpeta indicada.</span>
+                        </div>
+                    </div>
+                    <button class="btn btn-primary btn-sm" id="btnOpenInExplorer">📂 Abrir en Explorador</button>
+                </div>
+            </div>
+
+            <div class="modal-footer">
+                <button class="btn btn-secondary" id="btnDownloadDirect">⬇️ Descargar al Navegador</button>
+                <div class="footer-spacer"></div>
+                <button class="btn btn-secondary" id="btnCancelCopy">Cerrar</button>
+                <button class="btn btn-accent btn-large" id="btnExecuteCopy">💾 Copiar a la Carpeta</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ================================================================= -->
+    <!-- MODAL 2: CONFIGURACIÓN DE CARPETA DE GRABACIONES                  -->
+    <!-- ================================================================= -->
+    <div class="modal-backdrop hidden" id="settingsModal">
+        <div class="modal-box">
+            <div class="modal-header">
+                <h3>⚙️ Carpeta de Grabaciones Dashcam</h3>
+                <button class="btn-close-modal" id="btnCloseSettingsModal">✕</button>
+            </div>
+
+            <div class="modal-body">
+                <p class="modal-desc">Indica la ruta de la carpeta donde se encuentran las grabaciones de tu cámara (la carpeta que contiene <code>video/F/</code> y <code>video/R/</code>). Los archivos del programa permanecen completamente separados y aislados.</p>
+
+                <div class="form-group">
+                    <label>Ruta de la Dashcam en tu PC:</label>
+                    <div class="input-with-action">
+                        <input type="text" id="inputDashcamSourceDir" class="form-input mono" placeholder="D:\D026DASHCAM o E:\video\F">
+                        <button class="btn btn-secondary" id="btnPickSourceFolder" title="Buscar carpeta en el equipo">📁 Examinar...</button>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label>Carpeta predeterminada para copiar clips:</label>
+                    <div class="input-with-action">
+                        <input type="text" id="inputDefaultCopyDir" class="form-input mono" placeholder="D:\Videos\Dashcam o /ruta/destino">
+                        <button class="btn btn-secondary" id="btnPickDefaultCopyFolder" title="Buscar carpeta en el equipo">📁 Examinar...</button>
+                    </div>
+                </div>
+            </div>
+
+            <div class="modal-footer">
+                <button class="btn btn-secondary" id="btnCancelSettings">Cancelar</button>
+                <button class="btn btn-primary" id="btnSaveSettings">Guardar y Recargar</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ================================================================= -->
+    <!-- MODAL 3: EXPORTAR VIDEO CON TELEMETRÍA (FFmpeg)                   -->
+    <!-- ================================================================= -->
+    <div class="modal-backdrop hidden" id="exportModal">
+        <div class="modal-box">
+            <div class="modal-header">
+                <h3>🎬 Renderizar Video con Telemetría GPS</h3>
+                <button class="btn-close-modal" id="btnCloseModal">✕</button>
+            </div>
+
+            <div class="modal-body">
+                <p class="modal-desc">Genera un video en formato MP4 con el velocímetro en km/h, brújula, latitud/longitud y marca temporal incrustados directamente sobre el metraje usando FFmpeg.</p>
+
+                <div class="form-group">
+                    <label>Clip a Renderizar:</label>
+                    <select id="modalClipSelect" class="form-select"></select>
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Cámara:</label>
+                        <select id="modalCameraSelect" class="form-select">
+                            <option value="F">Delantera (F)</option>
+                            <option value="R">Trasera (R)</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Resolución:</label>
+                        <select id="modalResSelect" class="form-select">
+                            <option value="1080p">1080p Full HD (Recomendado, rápido)</option>
+                            <option value="native">4K Nativo (3840x2160)</option>
+                        </select>
+                    </div>
+                </div>
+
+                <!-- Render Progress Area -->
+                <div class="render-progress-box hidden" id="renderProgressBox">
+                    <div class="progress-bar-bg">
+                        <div class="progress-bar-fill" id="exportProgressFill" style="width: 0%"></div>
+                    </div>
+                    <div class="progress-status">
+                        <span id="exportStatusText">Renderizando video con FFmpeg...</span>
+                        <span id="exportStatusPct">0%</span>
+                    </div>
+                </div>
+
+                <!-- Export Ready Download Button -->
+                <div class="render-done-box hidden" id="renderDoneBox">
+                    <a href="#" class="btn btn-primary btn-large" id="btnDownloadExportedVideo" download>
+                        ⬇️ Descargar Video Exportado (.MP4)
+                    </a>
+                </div>
+            </div>
+
+            <div class="modal-footer">
+                <button class="btn btn-secondary" id="btnCancelExport">Cancelar</button>
+                <button class="btn btn-primary" id="btnStartExport">Iniciar Renderizado</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Scripts -->
+    <script src="/lib/leaflet/leaflet.js"></script>
+    <script src="/lib/mpegts/mpegts.js"></script>
+    <script src="app.js"></script>
+</body>
+</html>

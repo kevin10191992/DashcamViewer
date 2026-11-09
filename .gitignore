@@ -1,0 +1,48 @@
+# Dependencies
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Production Builds & Electron Dist
+dist/
+dist-native/
+build/
+*.exe
+*.msi
+*.7z
+*.zip
+
+# Embedded binaries (downloaded during build / CI)
+bin/
+*.dll
+
+# Cache, Media & Exports
+cache_mp4/
+exports/
+*.ts
+*.mp4
+*.gpx
+*.kml
+*.geojson
+
+# User & Local Configuration
+config.json
+.env
+.env.local
+.env.*.local
+
+# Operating System Files
+.DS_Store
+Thumbs.db
+ehthumbs.db
+desktop.ini
+
+# IDE & Editor Configurations
+.vscode/
+.idea/
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?

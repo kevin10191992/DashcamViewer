@@ -1,0 +1,16 @@
+node_modules
+dist
+dist-native
+bin
+cache_mp4
+exports
+.git
+.github
+*.exe
+*.msi
+*.7z
+*.zip
+*.bat
+config.json
+.env*
+scripts
