@@ -34,6 +34,10 @@
         statDates: document.getElementById('statDates'),
         btnOpenVideoExport: document.getElementById('btnOpenVideoExport'),
         btnOpenCopyClip: document.getElementById('btnOpenCopyClip'),
+        btnExportMenu: document.getElementById('btnExportMenu'),
+        exportDropdown: document.getElementById('exportDropdown'),
+        exportDropdownContainer: document.getElementById('exportDropdownContainer'),
+        lblExportGpx: document.getElementById('lblExportGpx'),
         btnOpenSettings: document.getElementById('btnOpenSettings'),
         lblSourceFolder: document.getElementById('lblSourceFolder'),
 
@@ -180,25 +184,20 @@
     function initMap() {
         const osmStandard = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
             maxZoom: 19,
-            attribution: '&copy; OpenStreetMap'
-        });
-
-        const cartoDark = L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
-            maxZoom: 19,
-            attribution: '&copy; CartoDB &copy; OpenStreetMap'
+            attribution: '&copy; <a href="https://www.openstreetmap.org/copyright" target="_blank">OpenStreetMap</a>'
         });
 
         const osmHot = L.tileLayer('https://{s}.tile.openstreetmap.fr/hot/{z}/{x}/{y}.png', {
             maxZoom: 19,
-            attribution: '&copy; Humanitarian OpenStreetMap'
+            attribution: '&copy; <a href="https://www.openstreetmap.org/copyright" target="_blank">OpenStreetMap</a>, Humanitarian Team'
         });
 
-        baseLayers = { 'osm': osmStandard, 'dark': cartoDark, 'hot': osmHot };
+        baseLayers = { 'osm': osmStandard, 'hot': osmHot };
 
         map = L.map('map', {
             center: [10.9278, -74.8272],
             zoom: 14,
-            layers: [cartoDark],
+            layers: [osmStandard],
             zoomControl: false
         });
 
@@ -242,6 +241,9 @@
             el.statDist.textContent = `${data.summary.totalDistanceKm} km`;
             el.statMaxSpeed.textContent = `${data.summary.overallMaxSpeed} km/h`;
             el.clipsCount.textContent = data.clips.length;
+            if (el.lblExportGpx) {
+                el.lblExportGpx.textContent = `Descargar GPX Completo (${data.summary.totalClips || data.clips.length} clips)`;
+            }
 
             if (data.summary.startTime && data.summary.endTime) {
                 const sDate = data.summary.startTime.split(' ')[0];
@@ -614,6 +616,28 @@
     // ==========================================================================
 
     function setupEventListeners() {
+        // Dropdown Exportar Ruta: abrir/cerrar al clic y cerrar al pulsar fuera o seleccionar opción
+        if (el.btnExportMenu && el.exportDropdownContainer) {
+            el.btnExportMenu.addEventListener('click', (e) => {
+                e.stopPropagation();
+                el.exportDropdownContainer.classList.toggle('open');
+            });
+
+            if (el.exportDropdown) {
+                el.exportDropdown.querySelectorAll('a').forEach(link => {
+                    link.addEventListener('click', () => {
+                        el.exportDropdownContainer.classList.remove('open');
+                    });
+                });
+            }
+
+            document.addEventListener('click', (e) => {
+                if (!el.exportDropdownContainer.contains(e.target)) {
+                    el.exportDropdownContainer.classList.remove('open');
+                }
+            });
+        }
+
         el.btnPlayPause.addEventListener('click', togglePlayPause);
 
         el.btnPrevClip.addEventListener('click', () => {

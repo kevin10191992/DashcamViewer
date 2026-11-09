@@ -5,13 +5,15 @@ const { parseClipGPS } = require('./gps-parser');
 
 function getFFmpegPath() {
     const isWin = process.platform === 'win32';
-    const localBin = path.join(__dirname, 'bin', isWin ? 'ffmpeg.exe' : 'ffmpeg');
-    if (fs.existsSync(localBin)) return localBin;
+    const binName = isWin ? 'ffmpeg.exe' : 'ffmpeg';
 
     if (process.resourcesPath) {
-        const prodBin = path.join(process.resourcesPath, 'bin', isWin ? 'ffmpeg.exe' : 'ffmpeg');
+        const prodBin = path.join(process.resourcesPath, 'bin', binName);
         if (fs.existsSync(prodBin)) return prodBin;
     }
+
+    const localBin = path.join(__dirname, 'bin', binName);
+    if (fs.existsSync(localBin)) return localBin;
 
     if (isWin) {
         const sysPath = 'C:\\Program Files (x86)\\GPS Media Player\\resources\\deps\\windows\\ffmpeg.exe';

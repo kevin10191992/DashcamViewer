@@ -50,14 +50,14 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: 🗜️ Empaquetar en archivo ZIP para Release
+      - name: 🗜️ Empaquetar archivos desempaquetados en ZIP para Release
         shell: powershell
         run: |
           $ver = "${{ github.ref_name }}"
           if (-not $ver -or $ver -like "refs/*") { $ver = "v1.0.0" }
           $zipFileName = "D026-Dashcam-Viewer-$ver-Windows-Portable.zip"
-          Compress-Archive -Path "dist\D026-Dashcam-Viewer-Portable.exe" -DestinationPath "dist\$zipFileName" -Force
-          Write-Host "Archivo zip creado: dist\$zipFileName"
+          Compress-Archive -Path "dist\win-unpacked\*" -DestinationPath "dist\$zipFileName" -Force
+          Write-Host "Archivo zip con archivos desempaquetados creado: dist\$zipFileName"
           echo "ZIP_NAME=$zipFileName" >> $env:GITHUB_ENV
 
       - name: 📤 Subir Artefactos de la Compilación

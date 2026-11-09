@@ -1,13 +1,15 @@
 {
   "name": "d026-dashcam-viewer",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Visualizador y extractor de rutas GPS para Dashcam D026",
   "main": "main.js",
   "scripts": {
     "start": "electron .",
     "server": "node server.js",
     "setup:ffmpeg": "powershell -ExecutionPolicy Bypass -File scripts/setup-ffmpeg.ps1",
-    "build:portable": "electron-builder --win portable"
+    "build:portable": "electron-builder --win portable",
+    "build:zip": "powershell -ExecutionPolicy Bypass -File scripts/package-zip.ps1",
+    "build": "npm run build:portable && npm run build:zip"
   },
   "keywords": ["dashcam", "gps", "viewer", "openstreetmap", "d026"],
   "author": "kperez",

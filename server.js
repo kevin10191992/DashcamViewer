@@ -1,22 +1,41 @@
 const express = require('express');
 const path = require('path');
 const fs = require('fs');
+const os = require('os');
 const { spawn, exec } = require('child_process');
 const { scanAllClips, resolveVideoDirectories, exportToGPX, exportToGeoJSON, exportToKML } = require('./gps-parser');
 const { exportVideoClip } = require('./video-exporter');
+const logger = require('./logger');
 
 const app = express();
-const PORT = process.env.PORT || 3000;
+const PORT = parseInt(process.env.PORT, 10) || 3000;
 const APP_DIR = __dirname;
+
+function resolveDataDir() {
+    if (process.env.DASHCAM_DATA_DIR) {
+        return path.resolve(process.env.DASHCAM_DATA_DIR);
+    }
+    if (__dirname.includes('app.asar') || process.resourcesPath) {
+        const base = process.env.APPDATA || (process.platform === 'darwin' ? path.join(process.env.HOME, 'Library', 'Application Support') : os.tmpdir());
+        const dir = path.join(base, 'd026-dashcam-viewer');
+        return dir;
+    }
+    return APP_DIR;
+}
+
+const DATA_DIR = resolveDataDir();
+
 function getFFmpegPath() {
     const isWin = process.platform === 'win32';
-    const localBin = path.join(APP_DIR, 'bin', isWin ? 'ffmpeg.exe' : 'ffmpeg');
-    if (fs.existsSync(localBin)) return localBin;
+    const binName = isWin ? 'ffmpeg.exe' : 'ffmpeg';
 
     if (process.resourcesPath) {
-        const prodBin = path.join(process.resourcesPath, 'bin', isWin ? 'ffmpeg.exe' : 'ffmpeg');
+        const prodBin = path.join(process.resourcesPath, 'bin', binName);
         if (fs.existsSync(prodBin)) return prodBin;
     }
+
+    const localBin = path.join(APP_DIR, 'bin', binName);
+    if (fs.existsSync(localBin)) return localBin;
 
     if (isWin) {
         const sysPath = 'C:\\Program Files (x86)\\GPS Media Player\\resources\\deps\\windows\\ffmpeg.exe';
@@ -31,18 +50,26 @@ const FFMPEG_PATH = getFFmpegPath();
 app.use(express.json());
 
 // Configuration management
-const CONFIG_FILE = path.join(APP_DIR, 'config.json');
+const CONFIG_FILE = path.join(DATA_DIR, 'config.json');
 let config = {
     dashcamDir: process.env.DASHCAM_DIR || (fs.existsSync(path.join(path.dirname(APP_DIR), 'D026DASHCAM')) ? path.join(path.dirname(APP_DIR), 'D026DASHCAM') : ''),
-    defaultCopyDir: process.env.COPY_DIR || (process.env.USERPROFILE ? path.join(process.env.USERPROFILE, 'Videos', 'Dashcam') : path.join(APP_DIR, 'exports'))
+    defaultCopyDir: process.env.COPY_DIR || (process.env.USERPROFILE ? path.join(process.env.USERPROFILE, 'Videos', 'Dashcam') : path.join(DATA_DIR, 'exports'))
 };
 
-// Load saved config if exists
+// Check if bundled default config exists
+const bundledConfigFile = path.join(APP_DIR, 'config.json');
+if (fs.existsSync(bundledConfigFile)) {
+    try {
+        config = { ...config, ...JSON.parse(fs.readFileSync(bundledConfigFile, 'utf8')) };
+    } catch (e) {}
+}
+
+// Load saved config if exists in DATA_DIR
 if (fs.existsSync(CONFIG_FILE)) {
     try {
         config = { ...config, ...JSON.parse(fs.readFileSync(CONFIG_FILE, 'utf8')) };
     } catch (e) {
-        console.warn('Could not read config.json, using defaults.');
+        logger.warn('No se pudo leer config.json del usuario, usando valores por defecto.');
     }
 }
 
@@ -56,31 +83,36 @@ if (process.argv[2]) {
     const cliPath = path.resolve(process.argv[2]);
     if (fs.existsSync(cliPath)) {
         config.dashcamDir = cliPath;
-        console.log(`[Config] Usando ruta pasada por argumento: ${config.dashcamDir}`);
+        logger.info(`[Config] Usando ruta pasada por argumento: ${config.dashcamDir}`);
     } else {
-        console.warn(`[Config] La ruta pasada por argumento no existe: ${cliPath}`);
+        logger.warn(`[Config] La ruta pasada por argumento no existe: ${cliPath}`);
     }
 }
 
 function saveConfig() {
     try {
         fs.writeFileSync(CONFIG_FILE, JSON.stringify(config, null, 2), 'utf8');
+        logger.info(`[Config] Configuración guardada en ${CONFIG_FILE}`);
     } catch (e) {
-        console.error('Error saving config.json:', e);
+        logger.error('[Config] Error guardando config.json:', e);
     }
 }
 
-saveConfig();
-
-// Ensure required project directories exist inside DashcamViewer
-const EXPORTS_DIR = path.join(APP_DIR, 'exports');
-const CACHE_DIR = path.join(APP_DIR, 'cache_mp4');
-if (!fs.existsSync(EXPORTS_DIR)) fs.mkdirSync(EXPORTS_DIR, { recursive: true });
-if (!fs.existsSync(CACHE_DIR)) fs.mkdirSync(CACHE_DIR, { recursive: true });
-['F', 'R'].forEach(cam => {
-    const p = path.join(CACHE_DIR, cam);
-    if (!fs.existsSync(p)) fs.mkdirSync(p, { recursive: true });
-});
+// Ensure required persistent directories exist in DATA_DIR
+const EXPORTS_DIR = path.join(DATA_DIR, 'exports');
+const CACHE_DIR = path.join(DATA_DIR, 'cache_mp4');
+try {
+    if (!fs.existsSync(DATA_DIR)) fs.mkdirSync(DATA_DIR, { recursive: true });
+    if (!fs.existsSync(EXPORTS_DIR)) fs.mkdirSync(EXPORTS_DIR, { recursive: true });
+    if (!fs.existsSync(CACHE_DIR)) fs.mkdirSync(CACHE_DIR, { recursive: true });
+    ['F', 'R'].forEach(cam => {
+        const p = path.join(CACHE_DIR, cam);
+        if (!fs.existsSync(p)) fs.mkdirSync(p, { recursive: true });
+    });
+    saveConfig();
+} catch (err) {
+    logger.error('Error inicializando directorios de datos:', err);
+}
 
 // Helper: locate exact file on disk using flexible directory structure
 function resolveClipPath(camera, filename) {
@@ -560,12 +592,43 @@ app.get('/api/export-status/:jobId', (req, res) => {
     res.json(job);
 });
 
-// Start server
-app.listen(PORT, () => {
-    console.log(`\n======================================================`);
-    console.log(`  🚗 D026 DASHCAM VIEWER ESTÁ LISTO Y EN EJECUCIÓN`);
-    console.log(`  📁 Carpeta de Grabaciones: ${config.dashcamDir}`);
-    console.log(`  📁 Carpeta del Proyecto:   ${APP_DIR}`);
-    console.log(`  🔗 Abre en tu navegador:   http://localhost:${PORT}`);
-    console.log(`======================================================\n`);
-});
+// Start server function with automatic port conflict handling
+function startServer(port = PORT) {
+    return new Promise((resolve, reject) => {
+        const tryListen = (p) => {
+            const server = app.listen(p, () => {
+                const actualPort = server.address().port;
+                logger.info(`\n======================================================`);
+                logger.info(`  🚗 D026 DASHCAM VIEWER ESTÁ LISTO Y EN EJECUCIÓN`);
+                logger.info(`  📁 Carpeta de Grabaciones: ${config.dashcamDir || '(No seleccionada)'}`);
+                logger.info(`  📁 Carpeta de Datos:       ${DATA_DIR}`);
+                logger.info(`  📁 Carpeta del Proyecto:   ${APP_DIR}`);
+                logger.info(`  📁 Binario FFmpeg:         ${FFMPEG_PATH}`);
+                logger.info(`  🔗 Abre en tu navegador:   http://localhost:${actualPort}`);
+                logger.info(`======================================================\n`);
+                resolve({ server, port: actualPort, app });
+            });
+
+            server.on('error', (err) => {
+                if (err.code === 'EADDRINUSE' && p < port + 10) {
+                    logger.warn(`Puerto ${p} ocupado, intentando con puerto ${p + 1}...`);
+                    tryListen(p + 1);
+                } else {
+                    logger.error(`Error al iniciar servidor en puerto ${p}:`, err);
+                    reject(err);
+                }
+            });
+        };
+
+        tryListen(port);
+    });
+}
+
+if (require.main === module) {
+    startServer().catch(err => {
+        logger.error('Error fatal al iniciar servidor:', err);
+        process.exit(1);
+    });
+}
+
+module.exports = { app, startServer, config, saveConfig, logger, DATA_DIR, EXPORTS_DIR, CACHE_DIR };

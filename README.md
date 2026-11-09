@@ -1,7 +1,7 @@
 # 🚗 D026 Dashcam Viewer & GPS Route Studio
 
-[![GitHub Release](https://img.shields.io/github/v/release/your-username/d026-dashcam-viewer?include_prereleases&style=flat-square)](https://github.com)
-[![Platform](https://img.shields.io/badge/platform-Windows%20%7C%20Linux%20%7C%20Docker-blue?style=flat-square)](https://github.com)
+[![GitHub Release](https://img.shields.io/github/v/release/kevin10191992/DashcamViewer?include_prereleases&style=flat-square)](https://github.com/kevin10191992/DashcamViewer/releases)
+[![Platform](https://img.shields.io/badge/platform-Windows%20%7C%20Linux%20%7C%20Docker-blue?style=flat-square)](https://github.com/kevin10191992/DashcamViewer)
 [![Node.js](https://img.shields.io/badge/node.js-%3E%3D20.0.0-brightgreen?style=flat-square)](https://nodejs.org)
 [![Electron](https://img.shields.io/badge/electron-%5E45.2.3-47848F?style=flat-square)](https://www.electronjs.org/)
 [![Docker](https://img.shields.io/badge/docker-ready-2496ED?style=flat-square)](https://www.docker.com/)
@@ -24,7 +24,7 @@ Desarrollada para ofrecer una alternativa local, gratuita y sin suscripciones a 
   - **Side-by-Side (Pantalla Dividida)**: Video y mapa en tiempo real con divisor deslizable (20% a 80%) y botones para maximizar video o mapa al 100%.
   - **Marcador dinámico**: El vehículo avanza en el mapa al reproducir el video, rotando de forma continua según el rumbo exacto registrado por la brújula (`bearing`).
   - **Navegación al clic**: Haz clic sobre cualquier punto del recorrido en el mapa y el reproductor saltará automáticamente al clip y segundo exacto de la grabación.
-  - Varios estilos de mapa integrados: CartoDB Dark (nocturno de alto contraste), OSM Estándar y OSM Humanitario.
+  - Estilos de mapa integrados: OpenStreetMap Estándar (por defecto) y OSM Humanitario.
 
 - **🎥 Soporte de Cámara Dual (Frontal y Trasera)**:
   - Conmutación instantánea entre cámara delantera (`video/F`) y trasera (`video/R`).
@@ -59,13 +59,15 @@ Desarrollada para ofrecer una alternativa local, gratuita y sin suscripciones a 
 
 Tienes 3 formas diferentes de correr la aplicación según tu caso de uso:
 
-### Opción 1: Ejecutable Portable (.EXE) para Windows (Recomendada para usuarios)
-No requiere instalar Node.js, Python, FFmpeg ni dependencias. Todo viene autocontenido en un único archivo ejecutable.
+### Opción 1: Ejecutable Portable o Archivos Desempaquetados (.ZIP) para Windows (Recomendada)
+No requiere instalar Node.js, Python, FFmpeg ni dependencias. Todo viene autocontenido. En la pestaña [Releases](https://github.com/kevin10191992/DashcamViewer/releases) encontrarás dos alternativas según tu preferencia:
 
-1. Descarga el archivo `D026-Dashcam-Viewer-Portable.exe` (o el `.zip`) desde la pestaña [Releases](https://github.com).
-2. **Cómo usarlo:**
-   - **Arrastrar y soltar**: Arrastra la carpeta de tu tarjeta SD (la que contiene `video/F` y `video/R`) directamente sobre el ícono del ejecutable.
-   - **O haz doble clic** para abrirlo y usa el botón **⚙️ Configurar Ruta** para seleccionar la carpeta mediante el explorador nativo de Windows.
+- 📦 **Archivo `.zip` (Desempaquetado)**: Contiene toda la aplicación lista para extraer y ejecutar directamente (`D026 Dashcam Viewer.exe`). Ideal para máxima velocidad de apertura sin tiempos de extracción temporal en `%TEMP%`.
+- ⚡ **Archivo único `.exe` (`D026-Dashcam-Viewer-Portable.exe`)**: Un solo ejecutable portátil que puedes llevar en un pendrive y usar en cualquier PC.
+
+**Cómo usarlo:**
+- **Arrastrar y soltar**: Arrastra la carpeta de tu tarjeta SD (la que contiene `video/F` y `video/R`) directamente sobre el ejecutable.
+- **O haz doble clic** para abrirlo y usa el botón **⚙️ Configurar Ruta** para seleccionar la carpeta mediante el explorador nativo de Windows.
 
 ---
 
@@ -75,8 +77,8 @@ Ideal si eres desarrollador o deseas modificar el código:
 
 1. **Clona el repositorio**:
    ```bash
-   git clone https://github.com/tu-usuario/d026-dashcam-viewer.git
-   cd d026-dashcam-viewer
+   git clone https://github.com/kevin10191992/DashcamViewer.git
+   cd DashcamViewer
    ```
 
 2. **Instala las dependencias**:
@@ -179,7 +181,7 @@ El repositorio incluye un flujo automatizado en `.github/workflows/release.yml` 
    - Descarga e instala dependencias.
    - Descarga una versión limpia de FFmpeg para Windows.
    - Compila la aplicación con `electron-builder`.
-   - Empaqueta el ejecutable en un archivo `D026-Dashcam-Viewer-v1.0.0-Windows-Portable.zip`.
+   - Empaqueta los archivos desempaquetados de la aplicación en un archivo `D026-Dashcam-Viewer-v1.0.0-Windows-Portable.zip`.
    - Crea un **GitHub Release** público con los archivos adjuntos listos para descarga.
 3. También puedes disparar la compilación manualmente en cualquier momento desde la pestaña **Actions** seleccionando el botón **Run workflow**.
 

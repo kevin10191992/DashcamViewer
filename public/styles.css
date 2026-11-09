@@ -212,6 +212,13 @@ body {
 
 .arrow-down {
     font-size: 10px;
+    margin-left: 4px;
+    display: inline-block;
+    transition: transform 0.2s ease;
+}
+
+.dropdown.open .arrow-down {
+    transform: rotate(180deg);
 }
 
 .dropdown-content {
@@ -228,7 +235,19 @@ body {
     overflow: hidden;
 }
 
-.dropdown:hover .dropdown-content {
+/* Invisible bridge so moving cursor from button to menu across the gap never closes hover */
+.dropdown-content::before {
+    content: '';
+    position: absolute;
+    top: -12px;
+    left: 0;
+    right: 0;
+    height: 12px;
+}
+
+.dropdown:hover .dropdown-content,
+.dropdown.open .dropdown-content,
+.dropdown:focus-within .dropdown-content {
     display: block;
 }
 

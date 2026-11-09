@@ -69,15 +69,15 @@
                 </button>
 
                 <!-- Export Full Route Menu -->
-                <div class="dropdown">
-                    <button class="btn btn-secondary" id="btnExportMenu">
+                <div class="dropdown" id="exportDropdownContainer">
+                    <button class="btn btn-secondary" id="btnExportMenu" type="button">
                         <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
                         Exportar Ruta
                         <span class="arrow-down">▾</span>
                     </button>
                     <div class="dropdown-content" id="exportDropdown">
                         <a href="/api/export/gpx" download="trayecto_completo.gpx">
-                            <span class="icon">📍</span> Descargar GPX Completo (187 clips)
+                            <span class="icon">📍</span> <span id="lblExportGpx">Descargar GPX Completo</span>
                         </a>
                         <a href="/api/export/geojson" download="trayecto_completo.geojson">
                             <span class="icon">🌐</span> Descargar GeoJSON
@@ -267,8 +267,7 @@
 
                         <!-- Map Layer Toggle -->
                         <select class="select-map-layer" id="selectMapLayer" title="Estilo del Mapa">
-                            <option value="osm">OpenStreetMap Estándar</option>
-                            <option value="dark">CartoDB Dark (Nocturno)</option>
+                            <option value="osm" selected>OpenStreetMap Estándar</option>
                             <option value="hot">OSM Humanitario</option>
                         </select>
 
